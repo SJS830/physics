@@ -18,23 +18,36 @@ peaks, _ = find_peaks(pos)
 peaks = peaks[np.where(pos[peaks] > .0015)]
 period = np.mean(np.diff(time[peaks]))
 
-def fitting_function(t, alpha, alphaDecay):
+def amplitudeFunction(t, alpha, alphaDecay):
     return amplitude * np.exp(-alpha * np.exp(-alphaDecay * t) * t)
 
-popt, pcov = curve_fit(fitting_function, time[peaks], pos[peaks])
+popt, pcov = curve_fit(amplitudeFunction, time[peaks], pos[peaks])
 alpha, alphaDecay = popt
 
-print("Amplitude:", amplitude)
-print("Equilibrium:", equilibrium)
-print("Period:", period)
-print("Alpha:", alpha)
-print("Alpha Decay:", alphaDecay)
+def positionFunction(t, phaseShift):
+    return amplitudeFunction(t, alpha, alphaDecay) * np.cos(2 * np.pi * (t - phaseShift) / period)
 
-plt.title(f"Amplitude: {amplitude:.4f}, Equilibrium: {equilibrium:.4f}, Period: {period:.4f}, Alpha: {alpha:.4f}, Alpha Decay: {alphaDecay:.4f}")
+popt, pcov = curve_fit(positionFunction, time, pos)
+phaseShift, = popt
+
+print(f"Amplitude: {amplitude:.4f}m")
+print(f"Equilibrium: {equilibrium:.4f}m")
+print(f"Period: {period:.4f}s")
+print(f"Phase Shift: {phaseShift:.4f}s")
+print(f"Alpha: {alpha:.4f}")
+print(f"Alpha Decay: {alphaDecay:.4f}")
+
+plt.title(f"Amplitude: {amplitude:.4f}m, Equilibrium: {equilibrium:.4f}m, Period: {period:.4f}s, Phase Shift: {phaseShift:.4f}s, Alpha: {alpha:.4f}, Alpha Decay: {alphaDecay:.4f}")
 plt.xlabel("Time [s]")
 plt.ylabel("Distance from equilibrium [m]")
-plt.plot(time, pos, color="red")
-plt.scatter(time[peaks], pos[peaks], color="orange")
-plt.plot(time, fitting_function(time, *popt), color="blue")
 
+plt.scatter(time[peaks], pos[peaks], color="orange", label="Peaks")
+
+lines = [
+    plt.plot(time, pos, color="red", label="Actual position")[0],
+    plt.plot(time, amplitudeFunction(time, alpha, alphaDecay), color="blue", label="Amplitude")[0],
+    plt.plot(time, positionFunction(time, phaseShift), color="green", label="Fit")[0]
+]
+
+plt.legend(handles=lines)
 plt.show()
